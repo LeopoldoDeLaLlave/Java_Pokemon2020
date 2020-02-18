@@ -5,32 +5,42 @@
  */
 package codigo;
 
+import java.sql.Statement;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
-import sun.java2d.pipe.DrawImage;
 
 /**
  *
- * @author xp
+ * @author Javier
  */
 public class VentanaPokedex extends javax.swing.JFrame {
 
     BufferedImage buffer1 = null;
     Image imagen1 = null;
     int contador = 0;
+    
+    Graphics2D g2, jpanelGraphics;
+
+    Statement estado;
+    ResultSet resultadoConsulta;
+    Connection conexion;
 
     @Override
     public void paint(Graphics g) {
         super.paintComponents(g);
-        Graphics2D g2 = (Graphics2D) imagenPokemon.getGraphics();
-        g2.drawImage(buffer1, 0, 0, imagenPokemon.getWidth(), imagenPokemon.getHeight(), null);
+        Graphics2D g2 = (Graphics2D) imagenPokemon2.getGraphics();
+        g2.drawImage(buffer1, 0, 0, imagenPokemon2.getWidth(), imagenPokemon2.getHeight(), null);
 
     }
 
@@ -44,33 +54,54 @@ public class VentanaPokedex extends javax.swing.JFrame {
         } catch (IOException ex) {
 
         }
+
+        buffer1 = (BufferedImage) imagenPokemon2.createImage(imagenPokemon2.getWidth(), imagenPokemon2.getHeight());
         
-        buffer1 = (BufferedImage) imagenPokemon.createImage(imagenPokemon.getWidth(),imagenPokemon.getHeight());
+        g2 = buffer1.createGraphics();
         
-        Graphics2D g2 = buffer1.createGraphics();
+        g2.setColor(Color.red);
+        g2.fillRect(0, 0, jPanel1.getWidth(), jPanel1.getHeight());
         
-        dibujaPokemonPosicion(30);
+        jpanelGraphics = (Graphics2D) jPanel1.getGraphics();
+
+        dibujaPokemonPosicion(0);
+
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            conexion = DriverManager.getConnection("jdbc:mysql://192.168.182.136/test", "root", "");
+            estado = conexion.createStatement();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
-    
-    private void dibujaPokemonPosicion(int posicion){
-        int fila = posicion/31;
+
+    private void dibujaPokemonPosicion(int posicion) {
+        int fila = posicion / 31;
         int columna = posicion % 31;
         Graphics2D g2 = (Graphics2D) buffer1.getGraphics();
         g2.setColor(Color.BLACK); //Pinta el fondo del Jpanel negro
-        g2.fillRect(0, 0, imagenPokemon.getWidth(), imagenPokemon.getHeight());
+        g2.fillRect(0, 0, imagenPokemon2.getWidth(), imagenPokemon2.getHeight());
         g2.drawImage(imagen1,
                 0//Posicion x inicial dentro del jpanel
-                ,0//Posicion y inicial dentro del jpanel
-                , imagenPokemon.getWidth()//Ancho Jpanel
-                , imagenPokemon.getHeight()//LArgo jpanel
-                , columna*96//Posicion x inicial dentro de la imagen
-                , fila*96//Posicion x inicial dentro de la imagen
-                , columna*96+96//Posicion final x
-                , fila*96+96//Posicion final x
-                , null);
-        
+                ,
+                 0//Posicion y inicial dentro del jpanel
+                ,
+                 imagenPokemon2.getWidth()//Ancho Jpanel
+                ,
+                 imagenPokemon2.getHeight()//LArgo jpanel
+                ,
+                 columna * 96//Posicion x inicial dentro de la imagen
+                ,
+                 fila * 96//Posicion x inicial dentro de la imagen
+                ,
+                 columna * 96 + 96//Posicion final x
+                ,
+                 fila * 96 + 96//Posicion final x
+                ,
+                 null);
+
         repaint();
-        
+
     }
 
     /**
@@ -82,21 +113,22 @@ public class VentanaPokedex extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        imagenPokemon = new javax.swing.JPanel();
+        jPanel1 = new javax.swing.JPanel();
+        imagenPokemon2 = new javax.swing.JPanel();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         nombrePokemon = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        javax.swing.GroupLayout imagenPokemonLayout = new javax.swing.GroupLayout(imagenPokemon);
-        imagenPokemon.setLayout(imagenPokemonLayout);
-        imagenPokemonLayout.setHorizontalGroup(
-            imagenPokemonLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        javax.swing.GroupLayout imagenPokemon2Layout = new javax.swing.GroupLayout(imagenPokemon2);
+        imagenPokemon2.setLayout(imagenPokemon2Layout);
+        imagenPokemon2Layout.setHorizontalGroup(
+            imagenPokemon2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 144, Short.MAX_VALUE)
         );
-        imagenPokemonLayout.setVerticalGroup(
-            imagenPokemonLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        imagenPokemon2Layout.setVerticalGroup(
+            imagenPokemon2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 144, Short.MAX_VALUE)
         );
 
@@ -114,55 +146,88 @@ public class VentanaPokedex extends javax.swing.JFrame {
             }
         });
 
+        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+        jPanel1.setLayout(jPanel1Layout);
+        jPanel1Layout.setHorizontalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(35, 35, 35)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jButton1)
+                        .addGap(18, 18, 18)
+                        .addComponent(jButton2))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGap(6, 6, 6)
+                        .addComponent(imagenPokemon2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(nombrePokemon, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(458, Short.MAX_VALUE))
+        );
+        jPanel1Layout.setVerticalGroup(
+            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(26, 26, 26)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(imagenPokemon2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(nombrePokemon, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(28, 28, 28)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton1)
+                    .addComponent(jButton2))
+                .addContainerGap(428, Short.MAX_VALUE))
+        );
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jButton1)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton2))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(imagenPokemon, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(nombrePokemon, javax.swing.GroupLayout.PREFERRED_SIZE, 209, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(109, Short.MAX_VALUE))
+            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(102, 102, 102)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(imagenPokemon, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(nombrePokemon, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(28, 28, 28)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1)
-                    .addComponent(jButton2))
-                .addContainerGap(51, Short.MAX_VALUE))
+            .addComponent(jPanel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        contador--;
-        if(contador<=0){
-            contador=0;
-        }
-    dibujaPokemonPosicion(contador);
-    }//GEN-LAST:event_jButton1ActionPerformed
-
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-        contador++;
-        if(contador>=649){
-            contador=649;
+
+        dibujaPokemonPosicion(contador);
+        try {
+            resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (contador + 1));
+            if (resultadoConsulta.next()) {
+                nombrePokemon.setText(resultadoConsulta.getString(2));
+            } else {
+
+            }
+        } catch (SQLException ex) {
+            nombrePokemon.setText("Este Pokemon no figura en la Pokedex");
         }
-    dibujaPokemonPosicion(contador);
+        contador++;
+        if (contador >= 649) {
+            contador = 649;
+        }
     }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        dibujaPokemonPosicion(contador);
+        try {
+            resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (contador + 1));
+            if (resultadoConsulta.next()) {
+                nombrePokemon.setText(resultadoConsulta.getString(2));
+            } else {
+
+            }
+        } catch (SQLException ex) {
+            nombrePokemon.setText("Este Pokemon no figura en la Pokedex");
+        }
+        contador--;
+        if (contador <= 0) {
+            contador = 0;
+        }
+    }//GEN-LAST:event_jButton1ActionPerformed
 
     /**
      * @param args the command line arguments
@@ -201,8 +266,11 @@ public class VentanaPokedex extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel imagenPokemon;
+    private javax.swing.JPanel imagenPokemon1;
+    private javax.swing.JPanel imagenPokemon2;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
+    private javax.swing.JPanel jPanel1;
     private javax.swing.JLabel nombrePokemon;
     // End of variables declaration//GEN-END:variables
 }
