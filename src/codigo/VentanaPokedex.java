@@ -27,12 +27,16 @@ import javax.swing.JPanel;
  */
 public class VentanaPokedex extends javax.swing.JFrame {
 
+    //Foto principal y línea evolutiva
     BufferedImage buffer1, buffer2, buffer3, buffer4 = null;
+    //Imagen del Pokemon
     Image imagen1 = null;
+    //Contador que nos indica en que Pokemon estamos
     int contador = 1;
 
     Graphics2D g2, g3, g4, g5;
 
+    //Para conectarnos con la base de datos
     Statement estado;
     ResultSet resultadoConsulta;
     Connection conexion;
@@ -43,9 +47,11 @@ public class VentanaPokedex extends javax.swing.JFrame {
     @Override
     public void paint(Graphics g) {
         super.paintComponents(g);
+        //Para el pokemon que tiene que aparecer
         Graphics2D g2 = (Graphics2D) imagenPokemon2.getGraphics();
         g2.drawImage(buffer1, 0, 0, imagenPokemon2.getWidth(), imagenPokemon2.getHeight(), null);
 
+        //Para la línea evolutiva
         Graphics2D g3 = (Graphics2D) evolucion1.getGraphics();
         g3.drawImage(buffer2, 0, 0, evolucion1.getWidth(), evolucion1.getHeight(), null);
 
@@ -63,44 +69,15 @@ public class VentanaPokedex extends javax.swing.JFrame {
     public VentanaPokedex() {
         initComponents();
         this.setLocationRelativeTo(null);
-        //Título e icono
-        setTitle("Pokedex");
-        setIconImage(new ImageIcon(getClass().getResource("/imagenes/pokemoniconpng.png")).getImage());
-        try {
-            imagen1 = ImageIO.read(getClass().getResource("/imagenes/black-white.png"));
-        } catch (IOException ex) {
 
-        }
+        primeraPantalla();
+        
+        conectarBBDD();
 
-        buffer1 = (BufferedImage) imagenPokemon2.createImage(imagenPokemon2.getWidth(), imagenPokemon2.getHeight());
+    }
 
-        g2 = buffer1.createGraphics();
-
-        buffer2 = (BufferedImage) evolucion1.createImage(evolucion1.getWidth(), evolucion1.getHeight());
-
-        g3 = buffer2.createGraphics();
-
-        buffer3 = (BufferedImage) evolucion2.createImage(evolucion2.getWidth(), evolucion2.getHeight());
-
-        g4 = buffer3.createGraphics();
-
-        buffer4 = (BufferedImage) evolucion3.createImage(evolucion3.getWidth(), evolucion3.getHeight());
-
-        g5 = buffer3.createGraphics();
-
-        //Ponemos el primer Pokemon
-        dibujaPokemonPosicion(0, buffer1, imagenPokemon2);
-
-        //Ponemos la primera descripción
-        descripcion.setText("Una rara semilla fue plantada en su espalda al nacer. La planta brota y crece con este Pokémon.");
-
-        //Ponemos logo Pokemon
-        ImageIcon miImagen = new ImageIcon((new ImageIcon(getClass().getResource("/imagenes/pokemon.png"))
-                .getImage()
-                .getScaledInstance(346, 71, Image.SCALE_SMOOTH)));
-
-        jLabel1.setIcon(miImagen);
-
+    //Nos conectamos con la Base de datos
+    private void conectarBBDD() {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             conexion = DriverManager.getConnection("jdbc:mysql://192.168.182.136/test", "root", "");
@@ -134,6 +111,59 @@ public class VentanaPokedex extends javax.swing.JFrame {
         }
     }
 
+    //Prepara la primera pantalla
+    private void primeraPantalla() {
+        //Título e icono
+        setTitle("Pokedex");
+        setIconImage(new ImageIcon(getClass().getResource("/imagenes/pokemoniconpng.png")).getImage());
+
+        try {
+            imagen1 = ImageIO.read(getClass().getResource("/imagenes/black-white.png"));
+        } catch (IOException ex) {
+
+        }
+
+        inicializaBuffers();
+
+        //Ponemos los pokemon por defecto
+        dibujaPokemonPosicion(0, buffer1, imagenPokemon2);
+        dibujaPokemonPosicion(0, buffer2, evolucion1);
+        dibujaPokemonPosicion(1, buffer3, evolucion2);
+        dibujaPokemonPosicion(2, buffer4, evolucion3);
+
+        //Ponemos la primera descripción
+        descripcion.setText("Una rara semilla fue plantada en su espalda al nacer. La planta brota y crece con este Pokémon.");
+
+        //Ponemos logo Pokemon
+        ImageIcon miImagen = new ImageIcon((new ImageIcon(getClass().getResource("/imagenes/pokemon.png"))
+                .getImage()
+                .getScaledInstance(346, 71, Image.SCALE_SMOOTH)));
+
+        jLabel1.setIcon(miImagen);
+        
+        jButton1.setEnabled(false);
+    }
+
+    //Se encarga de inicializar los buffers
+    private void inicializaBuffers() {
+        buffer1 = (BufferedImage) imagenPokemon2.createImage(imagenPokemon2.getWidth(), imagenPokemon2.getHeight());
+
+        g2 = buffer1.createGraphics();
+
+        buffer2 = (BufferedImage) evolucion1.createImage(evolucion1.getWidth(), evolucion1.getHeight());
+
+        g3 = buffer2.createGraphics();
+
+        buffer3 = (BufferedImage) evolucion2.createImage(evolucion2.getWidth(), evolucion2.getHeight());
+
+        g4 = buffer3.createGraphics();
+
+        buffer4 = (BufferedImage) evolucion3.createImage(evolucion3.getWidth(), evolucion3.getHeight());
+
+        g5 = buffer3.createGraphics();
+    }
+
+    //Pone el Pokemon que correspondiente en pantalla
     private void dibujaPokemonPosicion(int posicion, BufferedImage _buffer, JPanel _panel) {
         int fila = posicion / 31;
         int columna = posicion % 31;
@@ -167,7 +197,101 @@ public class VentanaPokedex extends javax.swing.JFrame {
 
     }
 
-    public void evoluciones() {
+    //cada vez que se cambia de Pokemon, borra las fotos de la línea evolutiva
+    private void limpiarCuadrosEvoluciones(BufferedImage _buffer, JPanel _imagen) {
+        Graphics2D g2 = (Graphics2D) _buffer.getGraphics();
+
+        g2.setColor(Color.GRAY); //Pinta el fondo del Jpanel negro
+
+        g2.fillRect(0, 0, _imagen.getWidth(), _imagen.getHeight());
+
+        g2.drawImage(_buffer, 0, 0, null);
+    }
+
+    //Pinta en pantalla las líneas evolutivas
+    private void pintarEvoluciones(Pokemon _p) {
+        if (_p.preEvolucion == null || _p.preEvolucion.equals("")) {//si ocupa la primera casilla
+
+            dibujaPokemonPosicion((contador - 1), buffer2, evolucion1);
+            if (_p.posEvolucion != null && !_p.posEvolucion.equals("")) {//Si tiene una segunta evolución
+
+                dibujaPokemonPosicion((Integer.parseInt(_p.posEvolucion) - 1), buffer3, evolucion2);
+                _p = listaPokemons.get(String.valueOf(_p.posEvolucion));
+
+                if (_p.posEvolucion != null && !_p.posEvolucion.equals("")) {//Si tiene una tercera evolución
+                    dibujaPokemonPosicion((Integer.parseInt(_p.posEvolucion) - 1), buffer4, evolucion3);
+                }
+            }
+        } else if (_p.posEvolucion == null || _p.posEvolucion.equals("")) {//Si es el útimo de su linea evolutiva
+            _p = listaPokemons.get(String.valueOf(_p.preEvolucion));
+            if (_p.preEvolucion != null && !_p.preEvolucion.equals("")) {//Si tiene dos pokemons anteriores a él en su linea evolutiva
+                dibujaPokemonPosicion((contador - 2), buffer3, evolucion2);//Pintamos el pokemon del centro
+                dibujaPokemonPosicion((contador - 1), buffer4, evolucion3);//Pintamos el pokemon de la derecha
+                dibujaPokemonPosicion((contador - 3), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+            } else {//si tiene un pokemon anterior a él en su línea evolutiva
+                dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
+                dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+            }
+        } else {//Si es el segundo pokemon de su línea evolutiva y tiene tanto posEvolución como preEvolución
+            dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
+            dibujaPokemonPosicion((contador), buffer4, evolucion3);//Pintamos el pokemon de la derecha
+            dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+        }
+    }
+
+    //Cambia los datos de la Pokedex al siguiente Pokemon o al anterior
+    private void apretarBoton() {
+
+        limpiarCuadrosEvoluciones(buffer2, evolucion1);
+        limpiarCuadrosEvoluciones(buffer3, evolucion2);
+        limpiarCuadrosEvoluciones(buffer4, evolucion3);
+        repaint();
+
+        dibujaPokemonPosicion(contador - 1, buffer1, imagenPokemon2);
+
+        //obtenemos los datos del Pokemon correspondiente a través del Hassmap
+        Pokemon p = listaPokemons.get(String.valueOf(contador));
+
+        if (p != null) {//Ponemos todos los datos en pantalla
+            if (contador < 10) {//Ponemos el ID
+                labelid.setText("Nº: 00" + (contador));
+            } else if (contador < 100) {
+                labelid.setText("Nº: 0" + (contador));
+            } else {
+                labelid.setText("Nº: " + (contador));
+            }
+            nombrePokemon.setText(p.nombre);
+            altura.setText(p.altura + " m");
+            peso.setText(p.peso + " kg");
+            habitat.setText(p.habitat);
+            especie.setText(p.especie);
+            tipo1.setText(p.tipo1);
+            tipo2.setText(p.tipo2);
+            habilidad.setText(p.habilidad);
+            ataque1.setText(p.movimiento1);
+            ataque2.setText(p.movimiento2);
+            ataque3.setText(p.movimiento3);
+            ataque4.setText(p.movimiento4);
+            descripcion.setText(p.descripcion);
+
+            pintarEvoluciones(p);
+
+        } else {//En caso de error lo señalarmeos
+            labelid.setText("Nº: Error");
+            nombrePokemon.setText("Error");
+            altura.setText("Error");
+            peso.setText("Error");
+            habitat.setText("Error");
+            especie.setText("Error");
+            tipo1.setText("Error");
+            tipo2.setText("Error");
+            habilidad.setText("Error");
+            ataque1.setText("Error");
+            ataque2.setText("Error");
+            ataque3.setText("Error");
+            ataque4.setText("Error");
+            descripcion.setText("Error");
+        }
 
     }
 
@@ -213,6 +337,7 @@ public class VentanaPokedex extends javax.swing.JFrame {
         evolucion2 = new javax.swing.JPanel();
         evolucion3 = new javax.swing.JPanel();
         evolucion1 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(1110, 900));
@@ -463,6 +588,12 @@ public class VentanaPokedex extends javax.swing.JFrame {
             .addGap(0, 150, Short.MAX_VALUE)
         );
 
+        jLabel2.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel2.setFont(new java.awt.Font("Dialog", 1, 24)); // NOI18N
+        jLabel2.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel2.setText("Linea evolutiva");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -493,12 +624,17 @@ public class VentanaPokedex extends javax.swing.JFrame {
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(47, 47, 47)
-                .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(47, 47, 47)
-                .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(192, 192, 192))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(47, 47, 47)
+                        .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(47, 47, 47)
+                        .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(194, 194, 194))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 247, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(345, 345, 345))))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -521,12 +657,14 @@ public class VentanaPokedex extends javax.swing.JFrame {
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                         .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(76, 76, 76)
+                .addGap(41, 41, 41)
+                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(35, 35, 35)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(519, Short.MAX_VALUE))
+                .addContainerGap(484, Short.MAX_VALUE))
         );
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1150, -1));
@@ -537,130 +675,27 @@ public class VentanaPokedex extends javax.swing.JFrame {
     //Botón para pasar al siguiente Pokemon
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
 
+        jButton1.setEnabled(true);
         contador++;
-        if (contador > 151) {
+        if (contador >= 151) {
             contador = 151;
+            jButton2.setEnabled(false);
         }
 
-        
-        dibujaPokemonPosicion(contador - 1, buffer1, imagenPokemon2);
-        Pokemon p = listaPokemons.get(String.valueOf(contador));
-        if (p != null) {
-            if (contador < 10) {//Ponemos el ID
-                labelid.setText("Nº: 00" + (contador));
-            } else if (contador < 100) {
-                labelid.setText("Nº: 0" + (contador));
-            } else {
-                labelid.setText("Nº: " + (contador));
-            }
-            nombrePokemon.setText(p.nombre);
-            altura.setText(p.altura + " m");
-            peso.setText(p.peso + " kg");
-            habitat.setText(p.habitat);
-            especie.setText(p.especie);
-            tipo1.setText(p.tipo1);
-            tipo2.setText(p.tipo2);
-            habilidad.setText(p.habilidad);
-            ataque1.setText(p.movimiento1);
-            ataque2.setText(p.movimiento2);
-            ataque3.setText(p.movimiento3);
-            ataque4.setText(p.movimiento4);
-            descripcion.setText(p.descripcion);
-
-            if (p.preEvolucion == null || p.preEvolucion.equals("")) {//si ocupa la primera casilla
-
-                dibujaPokemonPosicion((contador - 1), buffer2, evolucion1);
-                if (p.posEvolucion != null || !p.posEvolucion.equals("")) {
-                    dibujaPokemonPosicion((Integer.parseInt(p.posEvolucion) - 1), buffer3, evolucion2);
-                    p = listaPokemons.get(String.valueOf(p.posEvolucion));
-                    if (p.posEvolucion != null && !p.posEvolucion.equals("")) {
-                        dibujaPokemonPosicion((Integer.parseInt(p.posEvolucion) - 1), buffer4, evolucion3);
-                    }
-
-                }
-            } else if (p.posEvolucion == null || p.posEvolucion.equals("")) {//Si es el útimo de su linea evolutiva
-                p = listaPokemons.get(String.valueOf(p.preEvolucion));
-                if (p.preEvolucion != null && !p.preEvolucion.equals("")) {//Si tiene dos pokemons anteriores a él en su linea evolutiva
-                    dibujaPokemonPosicion((contador - 2), buffer3, evolucion2);//Pintamos el pokemon del centro
-                    dibujaPokemonPosicion((contador - 1), buffer4, evolucion3);//Pintamos el pokemon de la derecha
-                    dibujaPokemonPosicion((contador - 3), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
-                } else {//si tiene un pokemon anterior a él en su línea evolutiva
-                    dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
-                    dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
-                }
-            } else {//Si es el segundo pokemon de su línea evolutiva
-                dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
-                dibujaPokemonPosicion((contador), buffer4, evolucion3);//Pintamos el pokemon de la derecha
-                dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
-            }
-
-        } else {
-            labelid.setText("Nº: Error");
-            nombrePokemon.setText("Error");
-            altura.setText("Error");
-            peso.setText("Error");
-            habitat.setText("Error");
-            especie.setText("Error");
-            tipo1.setText("Error");
-            tipo2.setText("Error");
-            habilidad.setText("Error");
-            ataque1.setText("Error");
-            ataque2.setText("Error");
-            ataque3.setText("Error");
-            ataque4.setText("Error");
-            descripcion.setText("Error");
-        }
-
-
+        apretarBoton();
     }//GEN-LAST:event_jButton2ActionPerformed
 
     //Botón para volver al anterior Pokemon
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
 
+        jButton2.setEnabled(true);
         contador--;
         if (contador <= 1) {
             contador = 1;
+            jButton1.setEnabled(false);
         }
-        dibujaPokemonPosicion(contador - 1, buffer1, imagenPokemon2);
 
-        Pokemon p = listaPokemons.get(String.valueOf(contador));
-        if (p != null) {
-            if (contador < 10) {//Ponemos el ID
-                labelid.setText("Nº: 00" + (contador));
-            } else if (contador < 100) {
-                labelid.setText("Nº: 0" + (contador));
-            } else {
-                labelid.setText("Nº: " + (contador));
-            }
-            nombrePokemon.setText(p.nombre);
-            altura.setText(p.altura + " m");
-            peso.setText(p.peso + " kg");
-            habitat.setText(p.habitat);
-            especie.setText(p.especie);
-            tipo1.setText(p.tipo1);
-            tipo2.setText(p.tipo2);
-            habilidad.setText(p.habilidad);
-            ataque1.setText(p.movimiento1);
-            ataque2.setText(p.movimiento2);
-            ataque3.setText(p.movimiento3);
-            ataque4.setText(p.movimiento4);
-            descripcion.setText(p.descripcion);
-        } else {
-            labelid.setText("Nº: Error");
-            nombrePokemon.setText("Error");
-            altura.setText("Error");
-            peso.setText("Error");
-            habitat.setText("Error");
-            especie.setText("Error");
-            tipo1.setText("Error");
-            tipo2.setText("Error");
-            habilidad.setText("Error");
-            ataque1.setText("Error");
-            ataque2.setText("Error");
-            ataque3.setText("Error");
-            ataque4.setText("Error");
-            descripcion.setText("Error");
-        }
+        apretarBoton();
 
     }//GEN-LAST:event_jButton1ActionPerformed
 
@@ -713,7 +748,6 @@ public class VentanaPokedex extends javax.swing.JFrame {
     private javax.swing.JLabel habilidad;
     private javax.swing.JLabel habitat;
     private javax.swing.JPanel imagenPokemon2;
-    private javax.swing.JPanel imagenPokemon4;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
@@ -723,6 +757,7 @@ public class VentanaPokedex extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel17;
     private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
