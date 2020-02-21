@@ -17,6 +17,8 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JPanel;
@@ -42,9 +44,6 @@ public class VentanaPokedex extends javax.swing.JFrame {
     Statement estado;
     ResultSet resultadoConsulta;
     Connection conexion;
-
-    //estructura para guardar todo el contenido de la base de datos de golpe
-    HashMap<String, Pokemon> listaPokemons = new HashMap();
 
     @Override
     public void paint(Graphics g) {
@@ -84,30 +83,6 @@ public class VentanaPokedex extends javax.swing.JFrame {
             Class.forName("com.mysql.jdbc.Driver");
             conexion = DriverManager.getConnection("jdbc:mysql://192.168.182.136/test", "root", "");
             estado = conexion.createStatement();
-            resultadoConsulta = estado.executeQuery("Select * from pokemon");
-
-            //Recorremos el array del resultado uno a uno
-            //para ir cat¡rgando al hashmap
-            while (resultadoConsulta.next()) {
-                Pokemon p = new Pokemon();
-                p.nombre = resultadoConsulta.getString("nombre");
-                p.especie = resultadoConsulta.getString("especie");
-                p.habitat = resultadoConsulta.getString("habitat");
-                p.tipo1 = resultadoConsulta.getString("tipo1");
-                p.tipo2 = resultadoConsulta.getString("tipo2");
-                p.habilidad = resultadoConsulta.getString("habilidad");
-                p.movimiento1 = resultadoConsulta.getString("movimiento1");
-                p.movimiento2 = resultadoConsulta.getString("movimiento2");
-                p.movimiento3 = resultadoConsulta.getString("movimiento3");
-                p.movimiento4 = resultadoConsulta.getString("movimiento4");
-                p.peso = resultadoConsulta.getString("peso");
-                p.altura = resultadoConsulta.getString("altura");
-                p.preEvolucion = resultadoConsulta.getString("preEvolucion");
-                p.posEvolucion = resultadoConsulta.getString("posEvolucion");
-                p.descripcion = resultadoConsulta.getString("descripcion");
-                listaPokemons.put(resultadoConsulta.getString("id"), p);
-            }
-
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -136,12 +111,18 @@ public class VentanaPokedex extends javax.swing.JFrame {
         //Ponemos la primera descripción
         descripcion.setText("Una rara semilla fue plantada en su espalda al nacer. La planta brota y crece con este Pokémon.");
 
-        //Ponemos logo Pokemon
+        //Ponemos logo Pokemon y pokedex
         ImageIcon miImagen = new ImageIcon((new ImageIcon(getClass().getResource("/imagenes/pokemon.png"))
                 .getImage()
                 .getScaledInstance(346, 71, Image.SCALE_SMOOTH)));
 
         jLabel1.setIcon(miImagen);
+        
+        ImageIcon miImagen2 = new ImageIcon((new ImageIcon(getClass().getResource("/imagenes/pkdx.png"))
+                .getImage()
+                .getScaledInstance(346, 71, Image.SCALE_SMOOTH)));
+
+        jLabel8.setIcon(miImagen2);
 
         jButton1.setEnabled(false);
     }
@@ -210,35 +191,67 @@ public class VentanaPokedex extends javax.swing.JFrame {
         g2.drawImage(_buffer, 0, 0, null);
     }
 
+    private ResultSet devuelveConsulta(int _id) {
+
+        ResultSet _resultadoConsulta;
+        try {
+            _resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (_id));
+
+        } catch (SQLException ex) {
+            Logger.getLogger(VentanaPokedex.class.getName()).log(Level.SEVERE, null, ex);
+            _resultadoConsulta = null;
+
+        }
+
+        return _resultadoConsulta;
+
+    }
+
     //Pinta en pantalla las líneas evolutivas
-    private void pintarEvoluciones(Pokemon _p) {
-        if (_p.preEvolucion == null || _p.preEvolucion.equals("")) {//si ocupa la primera casilla
+    private void pintarEvoluciones() {
 
-            dibujaPokemonPosicion((contador - 1), buffer2, evolucion1);
-            if (_p.posEvolucion != null && !_p.posEvolucion.equals("")) {//Si tiene una segunta evolución
+        try {
+            resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (contador));
+            if (resultadoConsulta.next()) {
+                if (resultadoConsulta.getString(14) == null || resultadoConsulta.getString(14).equals("")) {//si ocupa la primera casilla
 
-                dibujaPokemonPosicion((Integer.parseInt(_p.posEvolucion) - 1), buffer3, evolucion2);
-                _p = listaPokemons.get(String.valueOf(_p.posEvolucion));
+                    dibujaPokemonPosicion((contador - 1), buffer2, evolucion1);//Check
+                    if (resultadoConsulta.getString(15) != null && !resultadoConsulta.getString(15).equals("")) {//Si tiene una segunta evolución
 
-                if (_p.posEvolucion != null && !_p.posEvolucion.equals("")) {//Si tiene una tercera evolución
-                    dibujaPokemonPosicion((Integer.parseInt(_p.posEvolucion) - 1), buffer4, evolucion3);
+                        dibujaPokemonPosicion((Integer.parseInt(resultadoConsulta.getString(15)) - 1), buffer3, evolucion2);//Check
+
+                        resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (contador + 1));
+                        if (resultadoConsulta.next()) {
+                            if (resultadoConsulta.getString(15) != null && !resultadoConsulta.getString(15).equals("")) {//Si tiene una tercera evolución
+                                dibujaPokemonPosicion((Integer.parseInt(resultadoConsulta.getString(15)) - 1), buffer4, evolucion3);
+                            }
+                        }
+                    }
+                } else if (resultadoConsulta.getString(15) == null || resultadoConsulta.getString(15).equals("")) {//Si es el útimo de su linea evolutiva
+
+                    resultadoConsulta = devuelveConsulta(Integer.parseInt(resultadoConsulta.getString(14)));
+
+                    if (resultadoConsulta.next()) {
+                        if (resultadoConsulta.getString(14) != null && !resultadoConsulta.getString(14).equals("")) {//Si tiene dos pokemons anteriores a él en su linea evolutiva
+                            dibujaPokemonPosicion((contador - 2), buffer3, evolucion2);//Pintamos el pokemon del centro
+                            dibujaPokemonPosicion((contador - 1), buffer4, evolucion3);//Pintamos el pokemon de la derecha
+                            dibujaPokemonPosicion((contador - 3), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+                        } else {//si tiene un pokemon anterior a él en su línea evolutiva
+                            dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
+                            dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+                        }
+                    }
+                } else {//Si es el segundo pokemon de su línea evolutiva y tiene tanto posEvolución como preEvolución
+                    dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
+                    dibujaPokemonPosicion((contador), buffer4, evolucion3);//Pintamos el pokemon de la derecha
+                    dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
                 }
             }
-        } else if (_p.posEvolucion == null || _p.posEvolucion.equals("")) {//Si es el útimo de su linea evolutiva
-            _p = listaPokemons.get(String.valueOf(_p.preEvolucion));
-            if (_p.preEvolucion != null && !_p.preEvolucion.equals("")) {//Si tiene dos pokemons anteriores a él en su linea evolutiva
-                dibujaPokemonPosicion((contador - 2), buffer3, evolucion2);//Pintamos el pokemon del centro
-                dibujaPokemonPosicion((contador - 1), buffer4, evolucion3);//Pintamos el pokemon de la derecha
-                dibujaPokemonPosicion((contador - 3), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
-            } else {//si tiene un pokemon anterior a él en su línea evolutiva
-                dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
-                dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
-            }
-        } else {//Si es el segundo pokemon de su línea evolutiva y tiene tanto posEvolución como preEvolución
-            dibujaPokemonPosicion((contador - 1), buffer3, evolucion2);//Pintamos el pokemon del centro
-            dibujaPokemonPosicion((contador), buffer4, evolucion3);//Pintamos el pokemon de la derecha
-            dibujaPokemonPosicion((contador - 2), buffer2, evolucion2);//Pinamos el pokemon de la izquierda
+        } catch (SQLException ex) {
+            Logger.getLogger(VentanaPokedex.class.getName()).log(Level.SEVERE, null, ex);
+
         }
+
     }
 
     //Cambia los datos de la Pokedex al siguiente Pokemon o al anterior
@@ -251,48 +264,55 @@ public class VentanaPokedex extends javax.swing.JFrame {
 
         dibujaPokemonPosicion(contador - 1, buffer1, imagenPokemon2);
 
-        //obtenemos los datos del Pokemon correspondiente a través del Hassmap
-        Pokemon p = listaPokemons.get(String.valueOf(contador));
+        try {
+            //Buscamos el nombre del Pokemon
+            resultadoConsulta = estado.executeQuery("select * from pokemon where id=" + (contador));
 
-        if (p != null) {//Ponemos todos los datos en pantalla
-            if (contador < 10) {//Ponemos el ID
-                labelid.setText("Nº: 00" + (contador));
-            } else if (contador < 100) {
-                labelid.setText("Nº: 0" + (contador));
-            } else {
-                labelid.setText("Nº: " + (contador));
+            if (resultadoConsulta.next()) {
+                nombrePokemon.setText(resultadoConsulta.getString(2));//Buscamos el nombre del Pokemon
+                if (contador < 10) {//Ponemos el ID
+                    labelid.setText("Nº: 00" + (contador));
+                } else if (contador < 100) {
+                    labelid.setText("Nº: 0" + (contador));
+                } else {
+                    labelid.setText("Nº: " + (contador));
+                }
+                descripcion.setText(resultadoConsulta.getString(16));//Buscamos la descripción del Pokemon
+                tipo1.setText(resultadoConsulta.getString(7));//Buscamos el tipo 1
+                tipo2.setText(resultadoConsulta.getString(8));//Buscamos el tipo 2
+                habilidad.setText(resultadoConsulta.getString(9));//Buscamos la habilidad
+                altura.setText(resultadoConsulta.getString(3) + " m");//Buscamos la altura
+                peso.setText(resultadoConsulta.getString(4) + " kg");//Buscamos el peso
+                especie.setText(resultadoConsulta.getString(5));//Buscamos la especie
+                habitat.setText(resultadoConsulta.getString(6));//Buscamos el habitat
+                ataque1.setText(resultadoConsulta.getString(10));//Buscamos el ataque1
+                ataque2.setText(resultadoConsulta.getString(11));//Buscamos el ataque2
+                ataque3.setText(resultadoConsulta.getString(12));//Buscamos el ataque3
+                ataque4.setText(resultadoConsulta.getString(13));//Buscamos el ataque4
+
+                pintarEvoluciones();
+
+            } else {//En caso de error lo señalarmeos
+                labelid.setText("Nº: Error");
+                nombrePokemon.setText("Error");
+                altura.setText("Error");
+                peso.setText("Error");
+                habitat.setText("Error");
+                especie.setText("Error");
+                tipo1.setText("Error");
+                tipo2.setText("Error");
+                habilidad.setText("Error");
+                ataque1.setText("Error");
+                ataque2.setText("Error");
+                ataque3.setText("Error");
+                ataque4.setText("Error");
+                descripcion.setText("Error");
+
             }
-            nombrePokemon.setText(p.nombre);
-            altura.setText(p.altura + " m");
-            peso.setText(p.peso + " kg");
-            habitat.setText(p.habitat);
-            especie.setText(p.especie);
-            tipo1.setText(p.tipo1);
-            tipo2.setText(p.tipo2);
-            habilidad.setText(p.habilidad);
-            ataque1.setText(p.movimiento1);
-            ataque2.setText(p.movimiento2);
-            ataque3.setText(p.movimiento3);
-            ataque4.setText(p.movimiento4);
-            descripcion.setText(p.descripcion);
 
-            pintarEvoluciones(p);
-
-        } else {//En caso de error lo señalarmeos
-            labelid.setText("Nº: Error");
-            nombrePokemon.setText("Error");
-            altura.setText("Error");
-            peso.setText("Error");
-            habitat.setText("Error");
-            especie.setText("Error");
-            tipo1.setText("Error");
-            tipo2.setText("Error");
-            habilidad.setText("Error");
-            ataque1.setText("Error");
-            ataque2.setText("Error");
-            ataque3.setText("Error");
-            ataque4.setText("Error");
-            descripcion.setText("Error");
+            //Buscamos la descripción del Pokemon
+        } catch (SQLException ex) {
+            nombrePokemon.setText("Este Pokemon no figura en la Pokedex");
         }
 
     }
@@ -346,9 +366,12 @@ public class VentanaPokedex extends javax.swing.JFrame {
         evolucion3 = new javax.swing.JPanel();
         evolucion1 = new javax.swing.JPanel();
         jLabel2 = new javax.swing.JLabel();
-        buscaid = new javax.swing.JTextField();
+        jPanel4 = new javax.swing.JPanel();
         jLabel3 = new javax.swing.JLabel();
+        buscaid = new javax.swing.JTextField();
         jButton3 = new javax.swing.JButton();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
 
         jDialog1.setSize(new java.awt.Dimension(400, 200));
 
@@ -668,8 +691,10 @@ public class VentanaPokedex extends javax.swing.JFrame {
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel2.setText("Linea evolutiva");
 
+        jPanel4.setBackground(new java.awt.Color(204, 204, 204));
+
         jLabel3.setBackground(new java.awt.Color(204, 204, 204));
-        jLabel3.setFont(new java.awt.Font("Dialog", 1, 18)); // NOI18N
+        jLabel3.setFont(new java.awt.Font("Dialog", 1, 24)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(0, 0, 0));
         jLabel3.setText("ID:");
         jLabel3.setOpaque(true);
@@ -681,53 +706,87 @@ public class VentanaPokedex extends javax.swing.JFrame {
             }
         });
 
+        jLabel7.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel7.setFont(new java.awt.Font("Dialog", 1, 24)); // NOI18N
+        jLabel7.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel7.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jLabel7.setText("Buscador");
+
+        javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
+        jPanel4.setLayout(jPanel4Layout);
+        jPanel4Layout.setHorizontalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel4Layout.createSequentialGroup()
+                .addGap(29, 29, 29)
+                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(buscaid, javax.swing.GroupLayout.DEFAULT_SIZE, 82, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
+                .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(30, 30, 30))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+        jPanel4Layout.setVerticalGroup(
+            jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                .addGap(17, 17, 17)
+                .addComponent(jLabel7, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(26, 26, 26)
+                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(buscaid, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jButton3))
+                .addContainerGap(36, Short.MAX_VALUE))
+        );
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+            .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(34, 34, 34)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(imagenPokemon2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(45, 45, 45)
                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(49, 49, 49)
                         .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(imagenPokemon2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(35, 35, 35)
-                        .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(buscaid, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 48, Short.MAX_VALUE)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 378, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 710, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(108, 108, 108))
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(21, 21, 21)
-                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(81, 81, 81)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                                .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 378, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jScrollPane2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 710, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(108, 108, 108))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 247, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(345, 345, 345))))
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(21, 21, 21)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 343, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(47, 47, 47)
                         .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(47, 47, 47)
                         .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(194, 194, 194))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 247, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(345, 345, 345))))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(81, 81, 81)
+                        .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -746,23 +805,24 @@ public class VentanaPokedex extends javax.swing.JFrame {
                     .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(3, 3, 3)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(buscaid, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 32, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(35, 35, 35)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(484, Short.MAX_VALUE))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(41, 41, 41)
+                        .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(82, 82, 82)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(evolucion2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(evolucion3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(evolucion1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(54, 54, 54)
+                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(36, 36, 36)
+                        .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(489, Short.MAX_VALUE))
         );
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1150, -1));
@@ -803,21 +863,21 @@ public class VentanaPokedex extends javax.swing.JFrame {
         try {
             if (!buscaid.getText().isEmpty()) {//Evitamos error si no hay ningún texto en el jtextfield
                 busquedaID = Integer.parseInt(buscaid.getText());
-                if(busquedaID>0 && busquedaID<=151){
+                if (busquedaID > 0 && busquedaID <= 151) {
                     jButton1.setEnabled(true);
                     jButton2.setEnabled(true);
-                    contador=busquedaID;
+                    contador = busquedaID;
                     apretarBoton();
-                    if(contador==1){
+                    if (contador == 1) {
                         jButton1.setEnabled(false);
                     }
-                    if(contador==151){
+                    if (contador == 151) {
                         jButton2.setEnabled(false);
                     }
-                    
-                }else if(busquedaID<=0){
+
+                } else if (busquedaID <= 0) {
                     jDialog3.setVisible(true);
-                }else{
+                } else {
                     jDialog2.setVisible(true);
                 }
 
@@ -897,9 +957,12 @@ public class VentanaPokedex extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
+    private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel6;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JLabel labelid;
